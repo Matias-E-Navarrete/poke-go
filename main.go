@@ -1,4 +1,4 @@
-package pokegogit
+package main
 
 import (
 	"encoding/json"
@@ -17,32 +17,32 @@ func main() {
 	// Create instance use case.
 	getPokemon := application.NewGetPokemon(httpAdapter)
 
-	http.HandleFunc("/pokemon/", func(w http.ResponseWriter, r *http.Request) {
-		pokemonIDStr := r.URL.Query().Get("id")
+	http.HandleFunc("/pokemon/", func(response http.ResponseWriter, request *http.Request) {
+		pokemonIDStr := request.URL.Path[len("/pokemon/"):]
 		pokemonID, error := strconv.Atoi(pokemonIDStr)
 		if error != nil {
-			http.Error(w, "Invalid Pokémon ID", http.StatusBadRequest)
+			http.Error(response, "Invalid Pokémon ID", http.StatusBadRequest)
 			return
 		}
 
 		data, error := getPokemon.Execute(pokemonID)
 		if error != nil {
-			http.Error(w, error.Error(), http.StatusInternalServerError)
+			http.Error(response, error.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		// Escribimos los datos del Pokémon en la respuesta HTTP
-		_, _ = w.Write([]byte(data.GetName()))
-
-		jsonResponse, error := json.Marshal(data)
+		response.Header().Set("Content-Type", "application/json")
+		pokemonJSON := map[string]interface{}{
+			"id":   data.GetID(),
+			"name": data.GetName(),
+		}
+		jsonResponse, error := json.Marshal(pokemonJSON)
 		if error != nil {
-			http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
+			http.Error(response, "Error encoding JSON", http.StatusInternalServerError)
 			return
 		}
-
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(jsonResponse)
+		response.Header().Set("Content-Type", "application/json")
+		_, _ = response.Write(jsonResponse)
 	})
 
 	fmt.Println("Server Running on port 8080")
